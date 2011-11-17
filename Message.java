@@ -6,7 +6,7 @@ import java.util.Date;
  *
  * @author sebastian
  */
-public class Message implements Serializable {
+public abstract class Message implements Serializable {
 
 	Date timeStamp;
 	String text;
