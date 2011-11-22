@@ -16,7 +16,7 @@ public class ChatServer {
     public void listen() {
 	while(true) {
 	    try {
-		new ClientHandler(socket.accept());
+		new ClientHandler(socket.accept()).start();
 	    }
 	    catch(IOException e) {
 		System.err.println("error: " + e);
