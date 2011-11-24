@@ -10,6 +10,7 @@ public class ClientHandler extends Thread {
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
+    private boolean loggedIn = false;
 
     public ClientHandler(Socket socket) {
 	this.socket = socket;
@@ -22,19 +23,31 @@ public class ClientHandler extends Thread {
 	}
     }
 
+    public void process(AuthMessage m) throws Exception {
+	AuthMessage random = new AuthMessage(m.getUsername(), 1024);
+	out.writeObject(m);
+	out.flush();
+
+	// TODO: implement a shared secret database
+	random.genAuthCode(SharedSecrets.getSharedSecret(m.getUsername));
+	if(!random.isCorrectAuthCode((AuthMessage)in.readObject()))
+	    throw new Exception(); // TODO: throw a more appropriate exception
+	else
+	    loggedIn = true;
+    }
+
+    public void process(TextMessage m) {
+    }
+
+    public void process(RegisterMessage m) {
+    }
+    
     public void run() {
 	try {
-	    // TODO: check if user is already registered
-	    String username = (Message)in.readObject().getUsername();
-
-	    AuthMessage m = new AuthMessage(username, 1024);
-	    out.writeObject(m);
-	    // TODO: implement a shared secret database
-	    m.getAuthCode(getSharedSecret(username));
-
-	    if(m.isCorrectAuthCode((AuthMessage)in.readObject())) {
-		out.writeObject(new String("Welcome to this server!"));
-	    }
+	    while(true)
+		// Does polymorphism work here? Does the object know what it
+		// *really* is?
+		process((Message)in.readObject());
 	}
 	catch(Exception e) { // TODO: more precise error handling
 	    System.err.println("error: " + e);
