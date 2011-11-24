@@ -47,7 +47,10 @@ public class ClientHandler extends Thread {
 	    while(true)
 		// Does polymorphism work here? Does the object know what it
 		// *really* is?
-		process((Message)in.readObject());
+		Message inp = (Message)in.readObject();
+	    if(inp instanceof TextMessage) {
+		process((TextMessage)inp);
+	    }
 	}
 	catch(Exception e) { // TODO: more precise error handling
 	    System.err.println("error: " + e);
