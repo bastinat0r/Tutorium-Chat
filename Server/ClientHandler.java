@@ -11,15 +11,17 @@ public class ClientHandler extends Thread {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private boolean loggedIn = false;
+    private SharedSecrets db;
 
-    public ClientHandler(Socket socket) {
+    public ClientHandler(Socket socket, SharedSecrets db) {
 	this.socket = socket;
+	this.db = db;
 	try {
 	    out = new ObjectOutputStream(socket.getOutputStream());
 	    in = new ObjectInputStream(socket.getInputStream());
 	}
 	catch(IOException e) {
-	    System.err.println("error: " + e);
+	    System.err.println("error in ClientHandler(): " + e);
 	}
     }
 
@@ -29,32 +31,40 @@ public class ClientHandler extends Thread {
 	out.flush();
 
 	// TODO: implement a shared secret database
-	random.genAuthCode(SharedSecrets.getSharedSecret(m.getUsername));
+	random.genAuthCode(db.getSecret(m.getUsername()));
 	if(!random.isCorrectAuthCode((AuthMessage)in.readObject()))
 	    throw new Exception(); // TODO: throw a more appropriate exception
 	else
 	    loggedIn = true;
     }
 
-    public void process(TextMessage m) {
+    /*
+      public void process(TextMessage m) {
     }
 
     public void process(RegisterMessage m) {
     }
+    */
     
     public void run() {
 	try {
-	    while(true)
+	    while(true) {
 		// Does polymorphism work here? Does the object know what it
 		// *really* is?
 		Message inp = (Message)in.readObject();
-	    if(inp instanceof TextMessage) {
-		process((TextMessage)inp);
+		if(inp instanceof AuthMessage) {
+		    process((AuthMessage)inp);
+		}
 	    }
 	}
 	catch(Exception e) { // TODO: more precise error handling
-	    System.err.println("error: " + e);
-	    socket.close();
+	    System.err.println("error in run(): " + e);
+	    try {
+		socket.close();
+	    }
+	    catch(Exception error) {
+		System.err.println("Could not close!");
+	    }
 	}
     }
 }
