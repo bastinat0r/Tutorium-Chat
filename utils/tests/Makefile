@@ -5,6 +5,7 @@ all:
 run:	
 	java -classpath '.:../' PasswordTest
 	java -classpath '.:../' AuthMessageTest
-
+	java -classpath '.:../' SharedSecretsTest
 clean:
-	rm -f *.class
+	rm -f *.class ../*.class
+	rm -f db.txt
