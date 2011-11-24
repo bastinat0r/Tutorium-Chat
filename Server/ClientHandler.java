@@ -13,7 +13,7 @@ public class ClientHandler extends Thread {
     private boolean loggedIn = false;
     private SharedSecrets db;
 
-    private boolean run = true; // used to indicate that thread the should stop
+    private boolean run = true; // used to indicate that the thread should stop
 
     public ClientHandler(Socket socket, SharedSecrets db) {
 	this.socket = socket;
@@ -50,7 +50,6 @@ public class ClientHandler extends Thread {
 	out.writeObject(m);
 	out.flush();
 
-	// TODO: implement a shared secret database
 	random.genAuthCode(db.getSecret(m.getUsername()));
 	if(!random.isCorrectAuthCode((AuthMessage)in.readObject()))
 	    throw new Exception(); // TODO: throw a more appropriate exception
