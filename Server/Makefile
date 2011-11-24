@@ -6,4 +6,4 @@ clean:
 	rm -f *.class	
 
 run:
-	java ChatServer
+	java ChatServerTest
