@@ -6,6 +6,12 @@ import java.io.IOException;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 
+/*
+  This part still has a big and unsolved problem: We can not read and write
+   at the same time. We should start at least one new thread for reading or
+   writing.
+*/
+
 public class ClientHandler extends Thread {
     private Socket socket;
     private ObjectOutputStream out;

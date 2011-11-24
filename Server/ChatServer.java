@@ -17,6 +17,8 @@ public class ChatServer {
     public void listen() {
 	while(true) {
 	    try {
+		// TODO: We should keep track of clients so we can send
+		// messages to them
 		new ClientHandler(socket.accept(), db).start();
 	    }
 	    catch(IOException e) {
