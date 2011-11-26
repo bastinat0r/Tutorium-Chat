@@ -1,9 +1,5 @@
 package tutoriumchat.utils;
 
-import AuthMessage;
-import Message;
-import Password;
-
 /*
 The basic idea is that we need to avoid two things:
  
@@ -27,41 +23,40 @@ The basic idea is that we need to avoid two things:
 */
 
 public class AuthMessage extends Message {
-  private byte[] randomSalt;
-
-  public AuthMessage(String username, byte[] randomSalt) {
+    private byte[] randomSalt;
+    
+    public AuthMessage(String username, byte[] randomSalt) {
 	super(username, "");
 	this.randomSalt = randomSalt;
-  }
+    }
 
-  public AuthMessage(String username, int saltLen) {
+    public AuthMessage(String username, int saltLen) {
 	this(username, Password.genSalt(saltLen));
-  }
+    }
 
-  public AuthMessage(AuthMessage m) {
+    public AuthMessage(AuthMessage m) {
 	this(m.getUsername(), m.getRandomSalt());
-  }
+    }
 
-  public byte[] getRandomSalt() {
+    public byte[] getRandomSalt() {
 	return randomSalt;
-  }
+    }
 
-  public void genNewRandomSalt(int saltLen) {
+    public void genNewRandomSalt(int saltLen) {
 	randomSalt = Password.genSalt(saltLen);
-  }
+    }
 
-  public void genAuthCode(String sharedSecret) {
+    public void genAuthCode(String sharedSecret) {
 	Password authCode = new Password(sharedSecret, randomSalt);
 	authCode.genSaltedHash();
 	text = authCode.toString();
-  }
+    }
 
-  public void genAuthCode(Password sharedSecret) {
+    public void genAuthCode(Password sharedSecret) {
 	genAuthCode(sharedSecret.toString());
-  }
+    }
 
-  public boolean isCorrectAuthCode(AuthMessage m) {
+    public boolean isCorrectAuthCode(AuthMessage m) {
 	return text.equals(m.getText());
-  }
+    }
 }
-

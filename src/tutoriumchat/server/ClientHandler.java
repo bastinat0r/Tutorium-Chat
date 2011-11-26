@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.EOFException;
 import java.io.StreamCorruptedException;
 
+import tutoriumchat.utils.*;
+
 /*
   This part still has a big and unsolved problem: We can not read and write
    at the same time. We should start at least one new thread for reading or
@@ -15,6 +17,7 @@ import java.io.StreamCorruptedException;
 */
 
 public class ClientHandler extends Thread {
+    private Server server;
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
@@ -23,7 +26,8 @@ public class ClientHandler extends Thread {
 
     private boolean run = true; // used to indicate that the thread should stop
 
-    public ClientHandler(Socket socket, SharedSecrets db) {
+    public ClientHandler(Socket socket, SharedSecrets db, Server server) {
+	this.server = server;
 	this.socket = socket;
 	this.db = db;
 	try {
