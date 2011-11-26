@@ -11,6 +11,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import tutoriumchat.utils.SharedSecrets;
 
 /*
+ * 
+ Socket newconnection = socket.accept(); 
+ blocks until we get new connection./
+ Server hanged in this operation ALL time. It is not a bug, or what you mean?
+
  ATTENTION: We have a very stupid bug: The server blocks. I don't know the
  reason since the server seems to wait for the first client to input something
  although different client are handled in different threads.
