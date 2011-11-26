@@ -10,8 +10,15 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import tutoriumchat.utils.SharedSecrets;
 
-public class Server {
+/*
+ ATTENTION: We have a very stupid bug: The server blocks. I don't know the
+ reason since the server seems to wait for the first client to input something
+ although different client are handled in different threads.
 
+ Feel free to find out what's wrong...
+ */
+
+public class Server {
     private ServerSocket socket;
     private Map<Socket, ObjectOutputStream> connectionmap;
     ReentrantLock lock;

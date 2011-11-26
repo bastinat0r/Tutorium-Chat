@@ -21,8 +21,9 @@ public class ClientHandler implements Runnable {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     @SuppressWarnings("unused")
-    private boolean loggedIn = false;
+    private boolean authorized = false;
     private SharedSecrets db;
+    private boolean run = true; // used to determine whether thread should stop
 
     public ClientHandler(Socket socket, Server server) {
         this.server = server;
@@ -38,7 +39,7 @@ public class ClientHandler implements Runnable {
         if (!random.isCorrectAuthCode((AuthMessage) in.readObject()))
             throw new Exception(); // TODO: throw a more appropriate exception
         else
-            loggedIn = true;
+            authorized = true;
     }
 
     /*
@@ -51,7 +52,7 @@ public class ClientHandler implements Runnable {
 
         try {
             this.in = new ObjectInputStream(socket.getInputStream());
-            while (true) {
+            while (run) {
                 Message inp = (Message) in.readObject();
                 if (inp instanceof AuthMessage) {
                     // process((AuthMessage) inp);
