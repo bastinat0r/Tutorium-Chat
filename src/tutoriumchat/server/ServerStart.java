@@ -9,4 +9,3 @@ public class ServerStart {
 			} else new Server(8080);
 		}
 	}
-}
