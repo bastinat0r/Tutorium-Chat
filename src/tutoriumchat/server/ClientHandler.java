@@ -1,94 +1,64 @@
 package tutoriumchat.server;
 
 import java.net.Socket;
-import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
-
 import java.io.IOException;
-import java.io.EOFException;
-import java.io.StreamCorruptedException;
 
 import tutoriumchat.utils.*;
 
-/*
-  This part still has a big and unsolved problem: We can not read and write
-   at the same time. We should start at least one new thread for reading or
-   writing.
-*/
-
 public class ClientHandler extends Thread {
-    private Server server;
     private Socket socket;
-    private ObjectOutputStream out;
-    private ObjectInputStream in;
-    private boolean loggedIn = false;
+    private ObjectInputStream inp;
     private SharedSecrets db;
-
-    private boolean run = true; // used to indicate that the thread should stop
+    private Server server;
+    private boolean authorized = false;
+    private boolean run = true; // used to determine whether thread should stop
 
     public ClientHandler(Socket socket, SharedSecrets db, Server server) {
-	this.server = server;
 	this.socket = socket;
 	this.db = db;
+	this.server = server;
 	try {
-	    out = new ObjectOutputStream(socket.getOutputStream());
-	    in = new ObjectInputStream(socket.getInputStream());
-	}
-	catch(StreamCorruptedException e) {
-	    run = false;
-	    System.err.println("error in ClientHandler(): user has no valid client (" + socket.getInetAddress() + ")");
-	    
-	    try {
-		socket.getOutputStream().write("error: You are not using a valid client.\r\n".getBytes());
-		socket.getOutputStream().flush();
-	    }
-	    catch(Exception writeError) {
-		System.err.println("error in ClientHandler(): Could not even send error message to " + socket.getInetAddress());
-	    }
-	}
-	catch(EOFException e) {
-	    run = false;
-	    System.err.println("error in ClientHandler(): Client closed the connection (" + socket.getInetAddress() + ")");
+	    this.inp = new ObjectInputStream(socket.getInputStream());
 	}
 	catch(Exception e) {
-	    run = false;
-	    System.err.println("unknown error in ClientHandler(): " + e);
+	    System.err.println("error in ClientHandler():" + e);
+	    try {
+		socket.close();
+	    }
+	    catch(IOException ioe) {
+		System.err.println("error: Could not even close socket (" +
+				   socket.getInetAddress() + "): " + ioe);
+	    }
 	}
     }
 
-
-    public void process(AuthMessage m) throws Exception {
-	AuthMessage random = new AuthMessage(m.getUsername(), 1024);
-	out.writeObject(m);
-	out.flush();
-
-	random.genAuthCode(db.getSecret(m.getUsername()));
-	if(!random.isCorrectAuthCode((AuthMessage)in.readObject()))
-	    throw new Exception(); // TODO: throw a more appropriate exception
-	else
-	    loggedIn = true;
+    public void process(AuthMessage m) {
+	System.out.println("client: " + m);
     }
 
-    /*
-      public void process(TextMessage m) {
-    }
-
-    public void process(RegisterMessage m) {
-    }
-    */
-    
     public void run() {
 	try {
 	    while(run) {
-		Message inp = (Message)in.readObject();
-		if(inp instanceof AuthMessage) {
-		    process((AuthMessage)inp);
+		Message m = (Message)inp.readObject();
+	
+		if(m instanceof AuthMessage) {
+		    process((AuthMessage)m);
 		}
 	    }
-	    socket.close();
 	}
-	catch(Exception e) { // TODO: more precise error handling
+	catch(Exception e) {
 	    System.err.println("error in run(): " + e);
+	    run = false;
+	}
+	finally {
+	    try {
+		socket.close();
+	    }
+	    catch(IOException e) {
+		System.err.println("error: Could not even close socket (" +
+				   socket.getInetAddress() + "): " + e);
+	    }
 	}
     }
 }
