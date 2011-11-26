@@ -4,45 +4,78 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
-import tutoriumchat.utils.*;
+import tutoriumchat.utils.SharedSecrets;
 
 public class Server {
 
     private ServerSocket socket;
-    private ConcurrentHashMap<Socket, ObjectOutputStream> connectionmap;
+    private Map<Socket, ObjectOutputStream> connectionmap;
+    ReentrantLock lock;
+    @SuppressWarnings("unused")
     private SharedSecrets db;
 
     public Server(int port) {
-	try {
-	    socket = new ServerSocket(port);
-	} catch (IOException e) {
-	    System.err.println("error in ChatServer(): " + e);
-	}
-	connectionmap = new ConcurrentHashMap<Socket, ObjectOutputStream>();
-	listen();
+        System.out.println("Starting server on port:" + port);
+        try {
+            socket = new ServerSocket(port);
+        } catch (IOException e) {
+            System.err.println("error in ChatServer(): " + e);
+        }
+        connectionmap = new HashMap<Socket, ObjectOutputStream>();
+        System.out.println("Started...");
+        listen();
     }
 
     public void listen() {
-	while (true) {
-	    try {
-		// TODO: We should keep track of clients so we can send
-		// messages to them
-		Socket newconnection = socket.accept();
-		// We give Reference for own Server in Thread, then they can use
-		// functions of our object.
-		// For Example sendToAll or removeSelf. That I would implement.
-		new ClientHandler(newconnection, db, this);
-		ObjectOutputStream newstream = new ObjectOutputStream(
-								      newconnection.getOutputStream());
-		connectionmap.put(newconnection, newstream);
-	    } catch (IOException e) {
-		System.err.println("error in void listen(): " + e);
-	    }
-	}
+        while (true) {
+            try {
+                Socket newconnection = socket.accept();
+                Thread newtread = new Thread(new ClientHandler(newconnection,
+                        this));
+                newtread.start();
+            } catch (IOException e) {
+                System.err.println("error in void listen(): " + e);
+            }
+        }
     }
-    // public void message(Object ){
-    // }
 
+    // We add OutputStream to Server
+    public void authorized(Socket socket, ObjectOutputStream newstream) {
+        // ObjectOutputStream newstream;
+        // newstream = new ObjectOutputStream(
+        // socket.getOutputStream());
+        lock.lock();
+        connectionmap.put(socket, newstream);
+        lock.unlock();
+    }
+
+    public void message(Object object) {
+        try {
+            lock.lock();
+            for (ObjectOutputStream value : connectionmap.values()) {
+                value.writeObject(object);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void removeSelf(Socket socket) {
+        lock.lock();
+        connectionmap.remove(socket);
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+
+    }
 }
