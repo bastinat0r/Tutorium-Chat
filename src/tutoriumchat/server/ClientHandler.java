@@ -15,6 +15,7 @@ import java.io.StreamCorruptedException;
 */
 
 public class ClientHandler extends Thread {
+    private Server serverSocket;
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
@@ -23,7 +24,10 @@ public class ClientHandler extends Thread {
 
     private boolean run = true; // used to indicate that the thread should stop
 
-    public ClientHandler(Socket socket, SharedSecrets db) {
+    public ClientHandler(Socket socket,
+			 Server serverSocket,
+			 SharedSecrets db) {
+	this.serverSocket = serverSocket;
 	this.socket = socket;
 	this.db = db;
 	try {
