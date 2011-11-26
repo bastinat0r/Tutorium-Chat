@@ -1,94 +1,79 @@
 package tutoriumchat.server;
 
-import java.net.Socket;
-import java.io.ObjectOutputStream;
-import java.io.ObjectInputStream;
-
 import java.io.IOException;
-import java.io.EOFException;
-import java.io.StreamCorruptedException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 
-import tutoriumchat.utils.*;
+import tutoriumchat.utils.AuthMessage;
+import tutoriumchat.utils.Message;
+import tutoriumchat.utils.SharedSecrets;
 
 /*
-  This part still has a big and unsolved problem: We can not read and write
-   at the same time. We should start at least one new thread for reading or
-   writing.
-*/
+ This part still has a big and unsolved problem: We can not read and write
+ at the same time. We should start at least one new thread for reading or
+ writing.
+ */
 
-public class ClientHandler extends Thread {
+public class ClientHandler implements Runnable {
     private Server server;
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
+    @SuppressWarnings("unused")
     private boolean loggedIn = false;
     private SharedSecrets db;
 
-    private boolean run = true; // used to indicate that the thread should stop
-
-    public ClientHandler(Socket socket, SharedSecrets db, Server server) {
-	this.server = server;
-	this.socket = socket;
-	this.db = db;
-	try {
-	    out = new ObjectOutputStream(socket.getOutputStream());
-	    in = new ObjectInputStream(socket.getInputStream());
-	}
-	catch(StreamCorruptedException e) {
-	    run = false;
-	    System.err.println("error in ClientHandler(): user has no valid client (" + socket.getInetAddress() + ")");
-	    
-	    try {
-		socket.getOutputStream().write("error: You are not using a valid client.\r\n".getBytes());
-		socket.getOutputStream().flush();
-	    }
-	    catch(Exception writeError) {
-		System.err.println("error in ClientHandler(): Could not even send error message to " + socket.getInetAddress());
-	    }
-	}
-	catch(EOFException e) {
-	    run = false;
-	    System.err.println("error in ClientHandler(): Client closed the connection (" + socket.getInetAddress() + ")");
-	}
-	catch(Exception e) {
-	    run = false;
-	    System.err.println("unknown error in ClientHandler(): " + e);
-	}
+    public ClientHandler(Socket socket, Server server) {
+        this.server = server;
+        this.socket = socket;
     }
 
-
     public void process(AuthMessage m) throws Exception {
-	AuthMessage random = new AuthMessage(m.getUsername(), 1024);
-	out.writeObject(m);
-	out.flush();
+        AuthMessage random = new AuthMessage(m.getUsername(), 1024);
+        out.writeObject(m);
+        out.flush();
 
-	random.genAuthCode(db.getSecret(m.getUsername()));
-	if(!random.isCorrectAuthCode((AuthMessage)in.readObject()))
-	    throw new Exception(); // TODO: throw a more appropriate exception
-	else
-	    loggedIn = true;
+        random.genAuthCode(db.getSecret(m.getUsername()));
+        if (!random.isCorrectAuthCode((AuthMessage) in.readObject()))
+            throw new Exception(); // TODO: throw a more appropriate exception
+        else
+            loggedIn = true;
     }
 
     /*
-      public void process(TextMessage m) {
-    }
+     * public void process(TextMessage m) { }
+     * 
+     * public void process(RegisterMessage m) { }
+     */
 
-    public void process(RegisterMessage m) {
-    }
-    */
-    
     public void run() {
-	try {
-	    while(run) {
-		Message inp = (Message)in.readObject();
-		if(inp instanceof AuthMessage) {
-		    process((AuthMessage)inp);
-		}
-	    }
-	    socket.close();
-	}
-	catch(Exception e) { // TODO: more precise error handling
-	    System.err.println("error in run(): " + e);
-	}
+
+        try {
+            this.in = new ObjectInputStream(socket.getInputStream());
+            while (true) {
+                Message inp = (Message) in.readObject();
+                if (inp instanceof AuthMessage) {
+                    // process((AuthMessage) inp);
+                }
+            }
+        } catch (IOException e) { // TODO: (may be) more precise error handling
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) { // TODO: (may be) more precise
+                                             // error handling
+            e.printStackTrace();
+        } finally {
+            try {
+                in.close();
+            } catch (Exception e) { // Ignore all exceptions by closing.
+            } finally {
+                try {
+                    out.close();
+                } catch (Exception e) {
+                } finally {
+                    server.removeSelf(socket);
+                }
+            }
+        }
     }
 }
