@@ -1,5 +1,3 @@
-package tutoriumchat.server;
-
 import java.net.Socket;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
