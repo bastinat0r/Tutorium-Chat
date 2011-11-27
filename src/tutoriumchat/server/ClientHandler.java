@@ -76,7 +76,7 @@ public class ClientHandler implements Runnable {
                     outstream.close();
                 } catch (Exception e) {
                 } finally {
-                    server.removeSelf(socket);
+                    server.removeClient(socket);
                 }
             }
         }
