@@ -51,35 +51,22 @@ public class ClientHandler implements Runnable {
      * public void process(RegisterMessage m) { }
      */
 
+    // Let us use a new and fancy feature from Java 7 here: try-with-resources
     public void run() {
-
-        try {
-            this.instream = new ObjectInputStream(socket.getInputStream());
-            this.outstream = new ObjectOutputStream(socket.getOutputStream());
-            waitAuthorisation();
-            server.authorized(socket, outstream); // We add our
+        try (this.instream = new ObjectInputStream(socket.getInputStream());
+	     this.outstream = new ObjectOutputStream(socket.getOutputStream()))
+		{
+		    waitAuthorisation();
+		    server.authorized(socket, outstream); // We add our
                                                   // OutputStreamSocket
-            messageLoop();
-        } catch (IOException e) { // TODO: (may be) more precise error handling
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) { // TODO: (may be) more precise
-                                             // error handling
-            e.printStackTrace();
-        } catch (AuthorisationException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                instream.close();
-            } catch (Exception e) { // Ignore all exceptions by closing.
-            } finally {
-                try {
-                    outstream.close();
-                } catch (Exception e) {
-                } finally {
-                    server.removeClient(socket);
-                }
-            }
-        }
+		    messageLoop();
+		}
+	catch (Exception e) {
+	    e.printStackTrace();
+	}
+	finally {
+	    server.removeClient(socket);
+	}
     }
 
     public void waitAuthorisation() throws IOException, ClassNotFoundException,
