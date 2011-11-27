@@ -5,9 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+import tutoriumchat.server.utils.AuthorisationException;
 import tutoriumchat.utils.AuthMessage;
 import tutoriumchat.utils.Message;
-import tutoriumchat.utils.SharedSecrets;
+import tutoriumchat.utils.TextMessage;
 
 /*
  This part still has a big and unsolved problem: We can not read and write
@@ -18,11 +19,9 @@ import tutoriumchat.utils.SharedSecrets;
 public class ClientHandler implements Runnable {
     private Server server;
     private Socket socket;
-    private ObjectOutputStream out;
-    private ObjectInputStream in;
-    @SuppressWarnings("unused")
+    private ObjectOutputStream outstream;
+    private ObjectInputStream instream;
     private boolean authorized = false;
-    private SharedSecrets db;
     private boolean run = true; // used to determine whether thread should stop
 
     public ClientHandler(Socket socket, Server server) {
@@ -30,50 +29,75 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
     }
 
-    public void process(AuthMessage m) throws Exception {
-        AuthMessage random = new AuthMessage(m.getUsername(), 1024);
-        out.writeObject(m);
-        out.flush();
-
-        random.genAuthCode(db.getSecret(m.getUsername()));
-        if (!random.isCorrectAuthCode((AuthMessage) in.readObject()))
-            throw new Exception(); // TODO: throw a more appropriate exception
+    public boolean process(AuthMessage message) throws IOException,
+            ClassNotFoundException, AuthorisationException {
+        AuthMessage random = new AuthMessage(message.getUsername(), 1024);
+        outstream.writeObject(message);
+        outstream.flush();
+        random.genAuthCode(server.getDb().getSecret(message.getUsername()));
+        if (!random.isCorrectAuthCode((AuthMessage) instream.readObject()))
+            throw new AuthorisationException("Some Error"); // TODO: throw a
+                                                            // more appropriate
+                                                            // exception
         else
-            authorized = true;
+            return true;
+    }
+
+    public void process(TextMessage message) {
+        server.sendMessage(message);
     }
 
     /*
-     * public void process(TextMessage m) { }
-     * 
      * public void process(RegisterMessage m) { }
      */
 
     public void run() {
 
         try {
-            this.in = new ObjectInputStream(socket.getInputStream());
-            while (run) {
-                Message inp = (Message) in.readObject();
-                if (inp instanceof AuthMessage) {
-                    // process((AuthMessage) inp);
-                }
-            }
+            this.instream = new ObjectInputStream(socket.getInputStream());
+            this.outstream = new ObjectOutputStream(socket.getOutputStream());
+            waitAuthorisation();
+            server.authorized(socket, outstream); // We add our
+                                                  // OutputStreamSocket
+            messageLoop();
         } catch (IOException e) { // TODO: (may be) more precise error handling
             e.printStackTrace();
         } catch (ClassNotFoundException e) { // TODO: (may be) more precise
                                              // error handling
             e.printStackTrace();
+        } catch (AuthorisationException e) {
+            e.printStackTrace();
         } finally {
             try {
-                in.close();
+                instream.close();
             } catch (Exception e) { // Ignore all exceptions by closing.
             } finally {
                 try {
-                    out.close();
+                    outstream.close();
                 } catch (Exception e) {
                 } finally {
                     server.removeSelf(socket);
                 }
+            }
+        }
+    }
+
+    public void waitAuthorisation() throws IOException, ClassNotFoundException,
+            AuthorisationException {
+        while ((authorized == false) && run) {
+            Message inp = (Message) instream.readObject();
+            if (inp instanceof AuthMessage) {
+                authorized = process((AuthMessage) inp);
+
+            }
+        }
+    }
+
+    public void messageLoop() throws IOException, ClassNotFoundException {
+        while (run) {
+            Message inp = (Message) instream.readObject();
+            if (inp instanceof TextMessage) {
+                process((TextMessage) inp);
             }
         }
     }

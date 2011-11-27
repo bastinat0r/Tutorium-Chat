@@ -27,8 +27,11 @@ public class Server {
     private ServerSocket socket;
     private Map<Socket, ObjectOutputStream> connectionmap;
     ReentrantLock lock;
-    @SuppressWarnings("unused")
     private SharedSecrets db;
+
+    public SharedSecrets getDb() {
+        return db;
+    }
 
     public Server(int port) {
         System.out.println("Starting server on port:" + port);
@@ -57,15 +60,12 @@ public class Server {
 
     // We add OutputStream to Server
     public void authorized(Socket socket, ObjectOutputStream newstream) {
-        // ObjectOutputStream newstream;
-        // newstream = new ObjectOutputStream(
-        // socket.getOutputStream());
         lock.lock();
         connectionmap.put(socket, newstream);
         lock.unlock();
     }
 
-    public void message(Object object) {
+    public void sendMessage(Object object) {
         try {
             lock.lock();
             for (ObjectOutputStream value : connectionmap.values()) {
