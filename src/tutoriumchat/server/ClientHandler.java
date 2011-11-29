@@ -1,6 +1,7 @@
 package tutoriumchat.server;
 
 import java.io.IOException;
+import java.io.StreamCorruptedException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -9,12 +10,6 @@ import tutoriumchat.server.utils.AuthorisationException;
 import tutoriumchat.utils.AuthMessage;
 import tutoriumchat.utils.Message;
 import tutoriumchat.utils.TextMessage;
-
-/*
- This part still has a big and unsolved problem: We can not read and write
- at the same time. We should start at least one new thread for reading or
- writing.
- */
 
 public class ClientHandler implements Runnable {
     private Server server;
@@ -51,17 +46,27 @@ public class ClientHandler implements Runnable {
      * public void process(RegisterMessage m) { }
      */
 
-    // Let us use a new and fancy feature from Java 7 here: try-with-resources
+    /*
+      Awesome, 20 years after Common Lisp has a standardized with-open-file
+      macro (and of course you could have written this yourself since the
+      beginning of the Lisp era), the Java guys finally added a (less
+      powerful) version of it in Java 7! It's time to use it! Please don't
+      reinvent the wheel for backward compatibility, simply upgrade to Java 7!
+      -- Rosario
+    */
     public void run() {
-        try (this.instream = new ObjectInputStream(socket.getInputStream());
-	     this.outstream = new ObjectOutputStream(socket.getOutputStream()))
+        try (ObjectInputStream inp =
+	     new ObjectInputStream(socket.getInputStream());
+	     ObjectOutputStream out =
+	     new ObjectOutputStream(socket.getOutputStream()))
 		{
+		    instream = inp;
+		    outstream = out;
 		    waitAuthorisation();
-		    server.authorized(socket, outstream); // We add our
-                                                  // OutputStreamSocket
+		    server.authorized(socket, outstream);
 		    messageLoop();
 		}
-	catch (Exception e) {
+	catch(Exception e) {
 	    e.printStackTrace();
 	}
 	finally {
