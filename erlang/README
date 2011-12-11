@@ -2,6 +2,12 @@ Dependencies: Erlang.
 
 To compile use "make".
 
+To work start scripts correctly you must to your
+$ERL_LIBS variable add the way to Tutorium-Chat
+One possibility: change in <Home>/.profile to
+"ERL_LIBS="$HOME/<Path to Tutorium Chat>/Tutorium-Chat
+ export ERL_LIBS"
+
 Starting server: escript server
 Starting client: escript client
 /nick Nickname -> change a Nickname
