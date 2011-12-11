@@ -58,10 +58,11 @@ public class Server {
         connectionmap.put(socket, newstream);
     }
 
-    public void sendMessage(String message) {
+    public void sendMessage(DataOutputStream output, String message) {
         try {
             for (DataOutputStream value : connectionmap.values())
-                value.writeUTF(message);
+                if (output != value)
+                    value.writeChars(message);
         } catch (IOException e) {
             e.printStackTrace();
         }
