@@ -10,6 +10,16 @@ One possibility: change in <Home>/.profile to
 
 Starting server: escript server
 Starting client: escript client
-/nick Nickname -> change a Nickname
-/room Roomname -> change a RoomName
-/exit -> close client shell
+
+It is possible to configure client 
+- escript client <IP> <Port>
+- escript client <Port>
+for example for java server: escript client 8080
+
+Commands that possible to use by client:
+
+/nick Nickname -> change a Nickname (client and server option)
+/room Roomname -> change a RoomName (erlang server option)
+/exit -> close client shell         (client option)
+
+ignore and delete erl_crash.dump

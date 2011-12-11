@@ -2,8 +2,8 @@
 % vim: filetype=erlang
 
 main(ListOfStrings) ->
-    start(),
-    loop("", ListOfStrings).
+    start(ListOfStrings),
+    shell_loop("").
 
 cmd(_, ["nick", NewName | _], DataString) ->
     uns_client:print(DataString),
@@ -19,10 +19,18 @@ loop(Name, List) ->
     uns_client:print(List),
     shell_loop(Name).
 
-start() ->
+start(ListOfStrings) ->
     ShellReader = self(),
     Receiver = spawn(fun() -> receiver(ShellReader) end),
     link(Receiver),
+    start(ListOfStrings, Receiver).
+
+start([Host, Port], Receiver) ->
+    {ok, IP} = inet_parse:address(Host),
+    uns_client:start_link(Receiver, IP, list_to_integer(Port));
+start([Port], Receiver) ->
+    uns_client:start_link(Receiver, list_to_integer(Port));
+start([], Receiver) ->
     uns_client:start_link(Receiver).
 
 receiver(Pid) ->
