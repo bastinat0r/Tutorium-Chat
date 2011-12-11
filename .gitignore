@@ -6,3 +6,5 @@ bin/
 .project
 org.eclipse.*
 .settings
+*.beam
+log/

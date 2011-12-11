@@ -1,0 +1,11 @@
+% vim: filetype=erlang
+{application, uns_chat,
+   [{description, "chat"},
+    {mod, {uns_chat_app, []}},
+    {vsn, "0.2"},
+    {registered, [uns_sup, uns_server, uns_log]},
+    {applications, [kernel, stdlib]},
+    {env, [
+           {log_dir, "log"}
+          ]}
+]}.

@@ -1,0 +1,8 @@
+#!/usr/bin/env escript
+% vim: filetype=erlang
+
+main([]) ->
+    application:start(uns_chat),
+    timer:sleep(infinity).
+
+ 

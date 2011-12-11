@@ -1,0 +1,8 @@
+Dependencies: Erlang.
+
+To compile use "make".
+
+Starting server: escript server
+Starting client: escript client
+/nick Nickname -> change a Nickname
+/room Roomname -> change a RoomName

@@ -1,0 +1,49 @@
+#!/usr/bin/env escript
+% vim: filetype=erlang
+
+main(ListOfStrings) ->
+    start(),
+    loop("", ListOfStrings).
+
+cmd(_, ["nick", NewName | _], DataString) ->
+    uns_client:print(DataString),
+    shell_loop(NewName++":");
+
+cmd(_, ["exit" | _], _) ->
+    ok;
+
+cmd(Name, _List, DataString) ->
+    loop(Name, DataString).
+
+loop(Name, List) ->
+    uns_client:print(List),
+    shell_loop(Name).
+
+start() ->
+    ShellReader = self(),
+    Receiver = spawn(fun() -> receiver(ShellReader) end),
+    link(Receiver),
+    uns_client:start_link(Receiver).
+
+receiver(Pid) ->
+    receive
+        {tcp, _, Packet} ->
+            io:put_chars(Packet),
+            receiver(Pid);
+        {tcp_closed, _} ->
+            exit(Pid, "connection closed")
+    end.
+
+shell_loop(Name) ->
+    io:put_chars(Name),
+    DataString = io:get_line(""),
+    case checkcmd(DataString) of
+        true ->
+            List = string:tokens(DataString, "/ \n"),
+            cmd(Name, List, DataString);
+        false ->
+            loop(Name, DataString)
+    end.
+
+checkcmd([47 | _Rest]) -> true;
+checkcmd([_ | _Rest]) -> false.
