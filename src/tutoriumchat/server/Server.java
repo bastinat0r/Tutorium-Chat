@@ -1,7 +1,7 @@
 package tutoriumchat.server;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,7 +23,7 @@ import tutoriumchat.utils.SharedSecrets;
 
 public class Server {
     private ServerSocket socket;
-    private ConcurrentHashMap<Socket, ObjectOutputStream> connectionmap;
+    private ConcurrentHashMap<Socket, DataOutputStream> connectionmap;
     private SharedSecrets db;
 
     public SharedSecrets getDb() {
@@ -37,7 +37,7 @@ public class Server {
         } catch (IOException e) {
             System.err.println("error in ChatServer(): " + e);
         }
-        connectionmap = new ConcurrentHashMap<Socket, ObjectOutputStream>();
+        connectionmap = new ConcurrentHashMap<Socket, DataOutputStream>();
         System.out.println("Started...");
         listen();
     }
@@ -45,7 +45,7 @@ public class Server {
     public void listen() {
         while (true) {
             try {
-		new Thread(new ClientHandler(socket.accept(), this)).start();
+                new Thread(new ClientHandler(socket.accept(), this)).start();
             } catch (IOException e) {
                 System.err.println("error in void listen(): " + e);
             }
@@ -53,27 +53,26 @@ public class Server {
     }
 
     // We add OutputStream to Server
-    // You don't need Lock here, that's what you use 
-    public void authorized(Socket socket, ObjectOutputStream newstream) {
-	connectionmap.put(socket, newstream);
+    // You don't need Lock here, that's what you use
+    public void authorized(Socket socket, DataOutputStream newstream) {
+        connectionmap.put(socket, newstream);
     }
 
-    public void sendMessage(Object object) {
+    public void sendMessage(String message) {
         try {
-            for (ObjectOutputStream value : connectionmap.values())
-                value.writeObject(object);
-	}
-	catch (IOException e) {
-	    e.printStackTrace();
-	}
+            for (DataOutputStream value : connectionmap.values())
+                value.writeUTF(message);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void removeClient(Socket socket) {
-	connectionmap.remove(socket);
+        connectionmap.remove(socket);
         try {
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
-	}
+        }
     }
 }
