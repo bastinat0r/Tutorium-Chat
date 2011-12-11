@@ -1,34 +1,40 @@
 -module(uns_connection).
 -export([start/1]).
+-export([get_nick/1, send_message/2]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 % Finite state machine
 -export([unauthorised/2, authorised/2]).
 -record(state, {socket, fsm = unauthorised, state}).
--record(user, {nick = undefined, room = "default", roompid, references = []}).
+-record(user, {socket, nick = undefined, room = "default", roompid, references = []}).
 
 start(ListenSocket) ->
     gen_server:start(?MODULE, [ListenSocket], []).
+
+get_nick(Pid) ->
+    gen_server:call(Pid, get_nick).
+
+send_message(Pid, Message) ->
+    gen_server:cast(Pid, {send, Message}).
+
 
 init([ListenSocket]) ->
     log("starting listenning"),
     self() ! start_accepting,
     {ok, #state{socket = ListenSocket}}.
 
-handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+handle_call(get_nick, _From, #state{state = ClientState} = State) ->
+    {reply, get_nick_name(ClientState), State}.
 
-handle_cast(_Msg, State) ->
-    {noreply, State}.
-
-handle_info({log, _Message}, State) ->
-    {noreply, State};
+handle_cast({send, {Ref, Message}}, #state{state = ClientState} = State) ->
+    NewClientState = send(Ref, Message, ClientState),
+    {noreply, State#state{state = NewClientState}}.
 
 handle_info(start_accepting, #state{socket = Socket}= State) ->
     {ok, NewWorkingSocket} = gen_tcp:accept(Socket),
     uns_server:started(self()),
-    {noreply, State#state{socket = NewWorkingSocket, state = #user{}}};
+    {noreply, State#state{state = inizialize(NewWorkingSocket)}};
 
 handle_info({tcp, _, Packet}, #state{fsm = Fsm, state = ClientState} = State) ->
     Message = binary_to_list(Packet),
@@ -39,10 +45,8 @@ handle_info({tcp, _, Packet}, #state{fsm = Fsm, state = ClientState} = State) ->
 handle_info({tcp_closed, _}, State) ->
     {stop, normal, State};
 
-handle_info({send, Ref, Message}, #state{socket = Socket, state = ClientState} = State) ->
-    SendFun = fun(MessageToSend) -> gen_tcp:send(Socket, list_to_binary(MessageToSend)) end,
-    NewClientState = send(Ref, Message, ClientState, SendFun),
-    {noreply, State#state{state = NewClientState}}.
+handle_info(_Info, State) ->
+    {noreply, State}.
 
 terminate(_Reason, State) ->
     close_connection(State#state.state),
@@ -73,13 +77,18 @@ get_client_name(Socket) ->
 
 %% ================================ FSM ==================================== %%
 %-record(user, {nick = undefined, room = "default", roompid, references}).
+inizialize(Socket) ->
+    #user{socket = Socket}.
+
+get_nick_name(#user{nick = Nick}) ->
+    Nick.
 
 unauthorised(Message, State) ->
     List = string:tokens(Message, "/ \n"),
     case tryauthorised(List) of
          {true, Name} ->
              Pid = uns_server:get_room_pid(State#user.room),
-             uns_room:join(Pid, self()),
+             uns_room:join(Pid, self(), Name),
              {authorised, State#user{nick = Name, roompid = Pid}};
          false ->
              {unauthorised, State}
@@ -96,12 +105,12 @@ authorised(Message, State) ->
             {authorised, State#user{references = [Reference | State#user.references]}}
     end.
 
-send(Reference, Message, #user{references = References} = State, SendFun) ->
+send(Reference, Message, #user{socket = Socket, references = References} = State) ->
     case lists:member(Reference, References) of
         true ->
             State#user{references = lists:delete(Reference, References)};
         false ->
-            SendFun(Message),
+            gen_tcp:send(Socket, list_to_binary(Message)),
             State
     end.
 
@@ -116,16 +125,29 @@ checkcmd([_ | _Rest]) -> false.
 tryauthorised(["nick", Name | _]) -> {true, Name};
 tryauthorised(_) -> false.
 
-parcecmd(Message, State) ->
-    case string:tokens(Message, "/ \n") of
-        ["nick", Name |_] ->
-            State#user{nick = Name};
-        ["room", Name |_] ->
-            changeroom(State, Name)
-    end.
+parcecmd(Message, State) -> cmd(string:tokens(Message, "/ \n"), State).
 
-changeroom(#user{roompid = OldRoomPid} = State, NewRoom) ->
+
+cmd(["nick", Name |_], State) -> State#user{nick = Name};
+cmd(["room", Name |_], State) -> changeroom(State, Name);
+cmd(["list", "rooms" |_], State) -> listrooms(State);
+cmd(["list", "users" |_], State) -> listusers(State);
+cmd(_, State) -> State.
+
+changeroom(#user{nick = Nick, roompid = OldRoomPid} = State, NewRoom) ->
     uns_room:leave(OldRoomPid, self()),
     NewRoomPid = uns_server:get_room_pid(NewRoom),
-    uns_room:join(NewRoomPid, self()),
+    uns_room:join(NewRoomPid, self(), Nick),
     State#user{room = NewRoom, roompid = NewRoomPid}.
+
+listrooms(#user{socket = Socket} = State) ->
+    Objects = uns_server:get_all_rooms(),
+    gen_tcp:send(Socket, "Rooms:\n"),
+    [gen_tcp:send(Socket, Room++"\n") || {Room, _} <- Objects],
+    State.
+
+listusers(#user{socket = Socket, room = Room, roompid = Pid} = State) ->
+    Names = uns_room:get_all_clients(Pid),
+    gen_tcp:send(Socket, Room++":\n"),
+    [gen_tcp:send(Socket, Name++"\n") || Name <- Names],
+    State.

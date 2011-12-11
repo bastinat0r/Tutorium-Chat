@@ -3,6 +3,10 @@
 
 main([]) ->
     application:start(uns_chat),
-    timer:sleep(infinity).
+    uns_server:start_server(5555),
+    timer:sleep(infinity);
 
- 
+main([Port]) ->
+    application:start(uns_chat),
+    uns_server:start_server(list_to_integer(Port)),
+    timer:sleep(infinity).

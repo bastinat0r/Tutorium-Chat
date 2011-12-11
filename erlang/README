@@ -9,17 +9,24 @@ Add to <Home>/.profile this configuration:
  export ERL_LIBS"
 
 Starting server: escript server
-Starting client: escript client
+Server starting standart on port 5555
+Starting client: escript client (server must be started at first)
+Client tries to connect to localhost on port 5555
 
-It is possible to configure client 
+It is possible to configure server
+- escript client <Port>
+
+It is possible to configure client
 - escript client <IP> <Port>
 - escript client <Port>
 for example for java server: escript client 8080
 
 Commands that possible to use by client:
 
-/nick Nickname -> change a Nickname (client change name and erlang server option)
-/room Roomname -> change a RoomName (erlang server option)
-/exit -> close client shell         (client option)
+/nick Nickname  -> change a Nickname (client change name and erlang server option)
+/room Roomname  -> change a RoomName (erlang server option)
+/list rooms     -> list all rooms on server
+/list users     -> list all users in rooms
+/exit           -> close client shell         (client option)
 
 ignore and delete erl_crash.dump (I will change it later)
