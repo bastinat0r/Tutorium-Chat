@@ -33,11 +33,16 @@ handle_call({join, Pid}, _From, #state{clients = Clients} = State) ->
 
 handle_call({leave, Pid}, _From, #state{clients = Clients} = State) ->
     %log(State#state.name, "leave"),
-    {reply, ok, State#state{clients = lists:delete(Pid, Clients)}}.
+    case lists:delete(Pid, Clients) of
+        [] ->
+            {stop, normal, ok, State#state{clients = []}};
+        NewClients ->
+            {reply, ok, State#state{clients = NewClients}}
+    end.
 
 handle_cast(_, State) -> {noreply, State}.
 handle_info(_Info, State) -> {noreply, State}.
-terminate(_Reason, _State) -> ok.
+terminate(_Reason, State) -> uns_server:room_close(State#state.name), ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %% =============================== Helpers ================================= %%

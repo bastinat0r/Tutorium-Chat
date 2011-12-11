@@ -44,8 +44,9 @@ handle_info({send, Ref, Message}, #state{socket = Socket, state = ClientState} =
     NewClientState = send(Ref, Message, ClientState, SendFun),
     {noreply, State#state{state = NewClientState}}.
 
-terminate(_Reason, _State) ->
-    log("connection terminate"),
+terminate(_Reason, State) ->
+    close_connection(State#state.state),
+    log("closed"),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -74,7 +75,6 @@ get_client_name(Socket) ->
 %-record(user, {nick = undefined, room = "default", roompid, references}).
 
 unauthorised(Message, State) ->
-    log("unauthorised" ++ Message),
     List = string:tokens(Message, "/ \n"),
     case tryauthorised(List) of
          {true, Name} ->
@@ -86,7 +86,6 @@ unauthorised(Message, State) ->
      end.
 
 authorised(Message, State) ->
-    log("authorised" ++ Message),
     case checkcmd(Message) of
         true ->
             NewState = parcecmd(Message, State),
@@ -98,13 +97,16 @@ authorised(Message, State) ->
     end.
 
 send(Reference, Message, #user{references = References} = State, SendFun) ->
-    case lists:member(Reference, References) of 
+    case lists:member(Reference, References) of
         true ->
             State#user{references = lists:delete(Reference, References)};
         false ->
             SendFun(Message),
             State
     end.
+
+close_connection(#user{roompid = Pid} = State) ->
+    uns_room:leave(Pid, self()).
 
 %% =============================== Helpers ================================= %%
 
