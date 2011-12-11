@@ -2,9 +2,9 @@ Dependencies: Erlang.
 
 To compile use "make".
 
-To work start scripts correctly you must to your
-$ERL_LIBS variable add the way to Tutorium-Chat
-One possibility: change in <Home>/.profile to
+To work start scripts correctly you must add to your
+$ERL_LIBS variable the way to Tutorium-Chat.
+Add to <Home>/.profile this configuration:
 "ERL_LIBS="$HOME/<Path to Tutorium Chat>/Tutorium-Chat
  export ERL_LIBS"
 
@@ -18,8 +18,8 @@ for example for java server: escript client 8080
 
 Commands that possible to use by client:
 
-/nick Nickname -> change a Nickname (client and server option)
+/nick Nickname -> change a Nickname (client change name and erlang server option)
 /room Roomname -> change a RoomName (erlang server option)
 /exit -> close client shell         (client option)
 
-ignore and delete erl_crash.dump
+ignore and delete erl_crash.dump (I will change it later)
